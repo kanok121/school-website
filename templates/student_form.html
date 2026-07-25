@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Student Form{% endblock %}
+{% block content %}
+<h4 class="mb-3">{{ 'Edit Student Information' if student else 'Add New Student' }}</h4>
+<div class="card p-4">
+<form method="POST" enctype="multipart/form-data">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Name *</label>
+      <input type="text" name="name" class="form-control" required value="{{ student.name if student else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Roll</label>
+      <input type="text" name="roll" class="form-control" value="{{ student.roll if student else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Admission Date</label>
+      <input type="date" name="admission_date" class="form-control" value="{{ student.admission_date if student else '' }}">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Class</label>
+      <select name="class_id" id="class_id" class="form-select" onchange="loadSections()">
+        <option value="">-- Select --</option>
+        {% for c in classes %}
+          <option value="{{ c.id }}" {% if student and student.class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Section</label>
+      <select name="section_id" id="section_id" class="form-select">
+        {% if student and student.section %}
+          <option value="{{ student.section.id }}" selected>{{ student.section.name }}</option>
+        {% endif %}
+      </select>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Father's Name</label>
+      <input type="text" name="father_name" class="form-control" value="{{ student.father_name if student else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Mother's Name</label>
+      <input type="text" name="mother_name" class="form-control" value="{{ student.mother_name if student else '' }}">
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Guardian's Phone</label>
+      <input type="text" name="phone" class="form-control" value="{{ student.phone if student else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Photo</label>
+      <input type="file" name="photo" class="form-control" accept="image/*">
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Address</label>
+      <textarea name="address" class="form-control" rows="2">{{ student.address if student else '' }}</textarea>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('students') }}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+
+<script>
+async function loadSections() {
+  const classId = document.getElementById('class_id').value;
+  const sectionSelect = document.getElementById('section_id');
+  sectionSelect.innerHTML = '<option value="">-- Select --</option>';
+  if (!classId) return;
+  const res = await fetch(`/api/sections/${classId}`);
+  const sections = await res.json();
+  sections.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    sectionSelect.appendChild(opt);
+  });
+}
+</script>
+{% endblock %}

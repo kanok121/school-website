@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Classes/Sections{% endblock %}
+{% block content %}
+<h4 class="mb-3">Class & Section Management</h4>
+
+<div class="card p-3 mb-4">
+  <form method="POST" class="row g-2">
+    <div class="col-auto">
+      <input type="text" name="class_name" class="form-control" placeholder="New class name (e.g. Class 6)" required>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">➕ Add Class</button>
+    </div>
+  </form>
+</div>
+
+<div class="row g-3">
+  {% for c in classes %}
+  <div class="col-md-4">
+    <div class="card p-3">
+      <h5>{{ c.name }}</h5>
+      <div class="mb-2">
+        {% for sec in c.sections %}
+          <span class="badge bg-secondary me-1">{{ sec.name }}</span>
+        {% else %}
+          <span class="text-muted small">No sections yet</span>
+        {% endfor %}
+      </div>
+      <form method="POST" action="{{ url_for('add_section', class_id=c.id) }}" class="d-flex gap-2">
+        <input type="text" name="section_name" class="form-control form-control-sm" placeholder="Section (e.g. A)" required>
+        <button type="submit" class="btn btn-sm btn-outline-primary">Add</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">No classes created yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

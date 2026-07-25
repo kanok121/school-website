@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Teacher Form{% endblock %}
+{% block content %}
+<h4 class="mb-3">{{ 'Edit Teacher Information' if teacher else 'Add New Teacher' }}</h4>
+<div class="card p-4">
+<form method="POST" enctype="multipart/form-data">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Name *</label>
+      <input type="text" name="name" class="form-control" required value="{{ teacher.name if teacher else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Designation</label>
+      <input type="text" name="designation" class="form-control" value="{{ teacher.designation if teacher else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Phone</label>
+      <input type="text" name="phone" class="form-control" value="{{ teacher.phone if teacher else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Email</label>
+      <input type="email" name="email" class="form-control" value="{{ teacher.email if teacher else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Joining Date</label>
+      <input type="date" name="joining_date" class="form-control" value="{{ teacher.joining_date if teacher else '' }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Photo</label>
+      <input type="file" name="photo" class="form-control" accept="image/*">
+    </div>
+    <div class="col-12">
+      <label class="form-label">Address</label>
+      <textarea name="address" class="form-control" rows="2">{{ teacher.address if teacher else '' }}</textarea>
+    </div>
+  </div>
+  <div class="mt-4">
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ url_for('teachers') }}" class="btn btn-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+{% endblock %}

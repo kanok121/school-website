@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Student Attendance{% endblock %}
+{% block content %}
+<h4 class="mb-3">Student Attendance</h4>
+
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="class_id" class="form-select" onchange="this.form.submit()">
+      <option value="">-- Select Class --</option>
+      {% for c in classes %}
+        <option value="{{ c.id }}" {% if selected_class == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <input type="date" name="date" value="{{ att_date }}" class="form-control" onchange="this.form.submit()">
+  </div>
+</form>
+
+{% if students %}
+<form method="POST">
+  <input type="hidden" name="class_id" value="{{ selected_class }}">
+  <input type="hidden" name="date" value="{{ att_date }}">
+  <div class="table-responsive">
+  <table class="table table-striped bg-white">
+    <thead><tr><th>Roll</th><th>Name</th><th>Attendance</th></tr></thead>
+    <tbody>
+      {% for s in students %}
+      <tr>
+        <td>{{ s.roll or '-' }}</td>
+        <td>
+          <input type="hidden" name="student_id" value="{{ s.id }}">
+          {{ s.name }}
+        </td>
+        <td>
+          <select name="status_{{ s.id }}" class="form-select form-select-sm">
+            <option value="Present" {% if s.current_status == 'Present' %}selected{% endif %}>Present</option>
+            <option value="Absent" {% if s.current_status == 'Absent' %}selected{% endif %}>Absent</option>
+            <option value="Leave" {% if s.current_status == 'Leave' %}selected{% endif %}>Leave</option>
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <button type="submit" class="btn btn-primary">Save Attendance</button>
+</form>
+{% elif selected_class %}
+<p class="text-muted">No students in this class.</p>
+{% else %}
+<p class="text-muted">Select a class to take attendance.</p>
+{% endif %}
+{% endblock %}

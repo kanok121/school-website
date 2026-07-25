@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="fs-1">🏫</div>
+      <div>
+        <h4 class="mb-0">{{ inst.name }}</h4>
+        <p class="text-muted mb-0">{{ inst.address }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3">
+      <strong>Institute ID:</strong> {{ inst.institute_id }}<br>
+      <strong>Academic Year:</strong> {{ inst.academic_year }}
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-3">
+    <div class="stat-card bg-primary text-white">
+      <div class="stat-num">{{ total_students }}</div>
+      <div>Total Students</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card bg-success text-white">
+      <div class="stat-num">{{ total_teachers }}</div>
+      <div>Total Teachers</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card bg-warning text-dark">
+      <div class="stat-num">{{ total_classes }}</div>
+      <div>Total Classes</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card bg-info text-dark">
+      <div class="stat-num">{{ present_today }}</div>
+      <div>Present Today ({{ today }})</div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4 g-3">
+  <div class="col-md-3">
+    <a href="{{ url_for('add_student') }}" class="btn btn-outline-primary w-100 py-3">➕ Add Student</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('add_teacher') }}" class="btn btn-outline-success w-100 py-3">➕ Add Teacher</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('attendance_students') }}" class="btn btn-outline-info w-100 py-3">✅ Take Student Attendance</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('attendance_teachers') }}" class="btn btn-outline-warning w-100 py-3">✅ Take Teacher Attendance</a>
+  </div>
+</div>
+{% endblock %}
