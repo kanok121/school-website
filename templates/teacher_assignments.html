@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width:750px;margin:20px auto;">
+  <h2 style="margin-bottom:5px;">Class &amp; Subject Assignment</h2>
+  <p style="color:#666;margin-bottom:20px;">Teacher: <strong>{{ teacher.name }}</strong></p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div style="padding:10px 15px;margin-bottom:15px;border-radius:6px;
+                    background:{{ '#fdecea' if category=='danger' else ('#fff8e1' if category=='warning' else '#e8f5e9') }};
+                    color:#333;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if not classes %}
+    <p style="color:#c0392b;">
+      No Class exists yet. Please <a href="{{ url_for('classes') }}">add a Class</a> first.
+    </p>
+  {% elif not subjects %}
+    <p style="color:#c0392b;">
+      No Subject exists yet. Please <a href="{{ url_for('subjects') }}">add a Subject</a> first.
+    </p>
+  {% else %}
+  <form method="POST" style="display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap;">
+    <select name="class_id" required style="flex:1;min-width:150px;padding:10px;border:1px solid #ccc;border-radius:6px;">
+      <option value="">-- Select Class --</option>
+      {% for c in classes %}
+      <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="subject_id" required style="flex:1;min-width:150px;padding:10px;border:1px solid #ccc;border-radius:6px;">
+      <option value="">-- Select Subject --</option>
+      {% for sub in subjects %}
+      <option value="{{ sub.id }}">{{ sub.name }}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit"
+            style="padding:10px 20px;background:#2b3a55;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+      Add
+    </button>
+  </form>
+  {% endif %}
+
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="text-align:left;border-bottom:2px solid #eee;">
+        <th style="padding:8px;">#</th>
+        <th style="padding:8px;">Class</th>
+        <th style="padding:8px;">Subject</th>
+        <th style="padding:8px;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in assignments %}
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:8px;">{{ loop.index }}</td>
+        <td style="padding:8px;">{{ a.school_class.name }}</td>
+        <td style="padding:8px;">{{ a.subject.name }}</td>
+        <td style="padding:8px;">
+          <form method="POST" action="{{ url_for('delete_teacher_assignment', assignment_id=a.id) }}"
+                onsubmit="return confirm('Remove this assignment?');" style="display:inline;">
+            <button type="submit" style="background:none;border:none;color:#c0392b;cursor:pointer;">
+              Remove
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" style="padding:15px;color:#888;">No class/subject assigned to this teacher yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="margin-top:20px;">
+    <a href="{{ url_for('teachers') }}">&larr; Back to Teachers list</a>
+  </p>
+</div>
+{% endblock %}
