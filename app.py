@@ -25,7 +25,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 API_KEY = os.environ.get("SCHOOL_API_KEY", "mojidpur-secret-key-2026")
 
 db = SQLAlchemy(app)
-
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in."
@@ -68,6 +67,11 @@ class Section(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
 
 
+class Subject(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)  # e.g. "Bangla", "Math"
+
+
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -96,12 +100,30 @@ class Teacher(db.Model):
     photo = db.Column(db.String(200))
 
 
+class TeacherAssignment(db.Model):
+    """Which teacher teaches which subject in which class."""
+    id = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
+
+    teacher = db.relationship("Teacher", backref=db.backref("assignments", cascade="all, delete-orphan"))
+    school_class = db.relationship("SchoolClass")
+    subject = db.relationship("Subject")
+
+    __table_args__ = (
+        db.UniqueConstraint("teacher_id", "class_id", "subject_id", name="uq_teacher_class_subject"),
+    )
+
+
 class StudentAttendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), default="Present")  # Present/Absent/Leave
+
     student = db.relationship("Student")
+
     __table_args__ = (db.UniqueConstraint("student_id", "date", name="uq_student_date"),)
 
 
@@ -110,7 +132,9 @@ class TeacherAttendance(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), default="Present")
+
     teacher = db.relationship("Teacher")
+
     __table_args__ = (db.UniqueConstraint("teacher_id", "date", name="uq_teacher_date"),)
 
 
@@ -316,6 +340,84 @@ def delete_teacher(teacher_id):
     return redirect(url_for("teachers"))
 
 
+# ----------------------- SUBJECTS (WEB) -----------------------
+
+@app.route("/subjects", methods=["GET", "POST"])
+@login_required
+def subjects():
+    if request.method == "POST":
+        name = request.form.get("subject_name", "").strip()
+        if name:
+            existing = Subject.query.filter(db.func.lower(Subject.name) == name.lower()).first()
+            if existing:
+                flash("This subject already exists!", "warning")
+            else:
+                db.session.add(Subject(name=name))
+                db.session.commit()
+                flash("Subject added successfully!", "success")
+        return redirect(url_for("subjects"))
+    all_subjects = Subject.query.order_by(Subject.name).all()
+    return render_template("subjects.html", subjects=all_subjects)
+
+
+@app.route("/subjects/<int:subject_id>/delete", methods=["POST"])
+@login_required
+def delete_subject(subject_id):
+    s = Subject.query.get_or_404(subject_id)
+    db.session.delete(s)
+    db.session.commit()
+    flash("Subject deleted.", "info")
+    return redirect(url_for("subjects"))
+
+
+# ----------------------- TEACHER CLASS/SUBJECT ASSIGNMENT (WEB) -----------------------
+
+@app.route("/teachers/<int:teacher_id>/assignments", methods=["GET", "POST"])
+@login_required
+def teacher_assignments(teacher_id):
+    teacher = Teacher.query.get_or_404(teacher_id)
+    classes = SchoolClass.query.all()
+    all_subjects = Subject.query.order_by(Subject.name).all()
+
+    if request.method == "POST":
+        class_id = request.form.get("class_id", type=int)
+        subject_id = request.form.get("subject_id", type=int)
+        if not classes:
+            flash("Please add a Class first (go to Classes page).", "warning")
+        elif not all_subjects:
+            flash("Please add a Subject first (go to Subjects page).", "warning")
+        elif class_id and subject_id:
+            existing = TeacherAssignment.query.filter_by(
+                teacher_id=teacher_id, class_id=class_id, subject_id=subject_id
+            ).first()
+            if existing:
+                flash("This class + subject is already assigned to this teacher!", "warning")
+            else:
+                db.session.add(TeacherAssignment(
+                    teacher_id=teacher_id, class_id=class_id, subject_id=subject_id
+                ))
+                db.session.commit()
+                flash("Assignment added successfully!", "success")
+        return redirect(url_for("teacher_assignments", teacher_id=teacher_id))
+
+    assignments = TeacherAssignment.query.filter_by(teacher_id=teacher_id).all()
+    return render_template(
+        "teacher_assignments.html",
+        teacher=teacher, classes=classes, subjects=all_subjects, assignments=assignments
+    )
+
+
+@app.route("/teacher_assignments/<int:assignment_id>/delete", methods=["POST"])
+@login_required
+def delete_teacher_assignment(assignment_id):
+    a = TeacherAssignment.query.get_or_404(assignment_id)
+    teacher_id = a.teacher_id
+    db.session.delete(a)
+    db.session.commit()
+    flash("Assignment removed.", "info")
+    return redirect(url_for("teacher_assignments", teacher_id=teacher_id))
+
+
 # ----------------------- CLASSES / SECTIONS (WEB) -----------------------
 
 @app.route("/classes", methods=["GET", "POST"])
@@ -375,9 +477,9 @@ def attendance_students():
     students_list = []
     if class_id:
         students_list = Student.query.filter_by(class_id=class_id).order_by(Student.roll).all()
-        existing_att = {a.student_id: a.status for a in StudentAttendance.query.filter_by(date=att_date).all()}
-        for s in students_list:
-            s.current_status = existing_att.get(s.id, "Present")
+    existing_att = {a.student_id: a.status for a in StudentAttendance.query.filter_by(date=att_date).all()}
+    for s in students_list:
+        s.current_status = existing_att.get(s.id, "Present")
 
     return render_template(
         "attendance_student.html", classes=classes, students=students_list,
@@ -414,7 +516,7 @@ def attendance_teachers():
 
 
 # ----------------------- REST API (for mobile app / external use) -----------------------
-# All /api/v1/* endpoints require header:  X-API-KEY: <your key>
+# All /api/v1/* endpoints require header: X-API-KEY: <your key>
 
 @app.route("/api/v1/students", methods=["GET"])
 @api_key_required
@@ -462,6 +564,17 @@ def api_teachers():
         "phone": t.phone, "email": t.email, "address": t.address,
         "photo": url_for("static", filename=f"uploads/{t.photo}", _external=True) if t.photo else None
     } for t in Teacher.query.all()]
+    return jsonify(data)
+
+
+@app.route("/api/v1/teachers/<int:teacher_id>/assignments", methods=["GET"])
+@api_key_required
+def api_teacher_assignments(teacher_id):
+    assignments = TeacherAssignment.query.filter_by(teacher_id=teacher_id).all()
+    data = [{
+        "class": a.school_class.name,
+        "subject": a.subject.name
+    } for a in assignments]
     return jsonify(data)
 
 
