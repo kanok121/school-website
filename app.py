@@ -225,6 +225,29 @@ def dashboard():
     )
 
 
+# ----------------------- SETTINGS (WEB) -----------------------
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    inst = Institute.query.first()
+    if not inst:
+        inst = Institute()
+        db.session.add(inst)
+        db.session.commit()
+    if request.method == "POST":
+        inst.name = request.form.get("name", "").strip() or inst.name
+        inst.address = request.form.get("address", "")
+        inst.phone = request.form.get("phone", "")
+        inst.email = request.form.get("email", "")
+        inst.institute_id = request.form.get("institute_id", "")
+        inst.academic_year = request.form.get("academic_year", "")
+        db.session.commit()
+        flash("School information updated successfully!", "success")
+        return redirect(url_for("settings"))
+    return render_template("settings.html", inst=inst)
+
+
 # ----------------------- STUDENTS (WEB) -----------------------
 
 @app.route("/students")
@@ -374,6 +397,36 @@ def classes():
     return render_template("classes.html", classes=all_classes)
 
 
+@app.route("/classes/<int:class_id>/edit", methods=["POST"])
+@login_required
+def edit_class(class_id):
+    c = SchoolClass.query.get_or_404(class_id)
+    name = request.form.get("class_name", "").strip()
+    if name:
+        c.name = name
+        db.session.commit()
+        flash("Class updated successfully!", "success")
+    return redirect(url_for("classes"))
+
+
+@app.route("/classes/<int:class_id>/delete", methods=["POST"])
+@login_required
+def delete_class(class_id):
+    c = SchoolClass.query.get_or_404(class_id)
+    linked = (
+        Student.query.filter_by(class_id=class_id).count()
+        or Subject.query.filter_by(class_id=class_id).count()
+        or Exam.query.filter_by(class_id=class_id).count()
+    )
+    if linked:
+        flash("এই ক্লাসে শিক্ষার্থী/সাবজেক্ট/পরীক্ষা যুক্ত আছে, তাই মুছা যাবে না। আগে সেগুলো সরান।", "danger")
+        return redirect(url_for("classes"))
+    db.session.delete(c)
+    db.session.commit()
+    flash("Class deleted successfully!", "info")
+    return redirect(url_for("classes"))
+
+
 @app.route("/classes/<int:class_id>/add_section", methods=["POST"])
 @login_required
 def add_section(class_id):
@@ -382,6 +435,31 @@ def add_section(class_id):
         db.session.add(Section(name=name, class_id=class_id))
         db.session.commit()
         flash("Section added successfully!", "success")
+    return redirect(url_for("classes"))
+
+
+@app.route("/sections/<int:section_id>/edit", methods=["POST"])
+@login_required
+def edit_section(section_id):
+    sec = Section.query.get_or_404(section_id)
+    name = request.form.get("section_name", "").strip()
+    if name:
+        sec.name = name
+        db.session.commit()
+        flash("Section updated successfully!", "success")
+    return redirect(url_for("classes"))
+
+
+@app.route("/sections/<int:section_id>/delete", methods=["POST"])
+@login_required
+def delete_section(section_id):
+    sec = Section.query.get_or_404(section_id)
+    if Student.query.filter_by(section_id=section_id).count() > 0:
+        flash("এই সেকশনে শিক্ষার্থী যুক্ত আছে, তাই মুছা যাবে না।", "danger")
+        return redirect(url_for("classes"))
+    db.session.delete(sec)
+    db.session.commit()
+    flash("Section deleted successfully!", "info")
     return redirect(url_for("classes"))
 
 
@@ -475,6 +553,29 @@ def exams():
     return render_template("exams.html", exams=all_exams, classes=classes)
 
 
+@app.route("/exams/<int:exam_id>/edit", methods=["POST"])
+@login_required
+def edit_exam(exam_id):
+    e = Exam.query.get_or_404(exam_id)
+    e.name = request.form["name"]
+    e.class_id = request.form.get("class_id", type=int)
+    e.exam_date = request.form.get("exam_date")
+    db.session.commit()
+    flash("Exam updated successfully!", "success")
+    return redirect(url_for("exams"))
+
+
+@app.route("/exams/<int:exam_id>/delete", methods=["POST"])
+@login_required
+def delete_exam(exam_id):
+    e = Exam.query.get_or_404(exam_id)
+    Mark.query.filter_by(exam_id=exam_id).delete()
+    db.session.delete(e)
+    db.session.commit()
+    flash("Exam deleted successfully!", "info")
+    return redirect(url_for("exams"))
+
+
 @app.route("/subjects", methods=["GET", "POST"])
 @login_required
 def subjects():
@@ -492,6 +593,30 @@ def subjects():
     all_subjects = Subject.query.order_by(Subject.class_id).all()
     classes = SchoolClass.query.all()
     return render_template("subjects.html", subjects=all_subjects, classes=classes)
+
+
+@app.route("/subjects/<int:subject_id>/edit", methods=["POST"])
+@login_required
+def edit_subject(subject_id):
+    s = Subject.query.get_or_404(subject_id)
+    s.name = request.form["name"]
+    s.class_id = request.form.get("class_id", type=int)
+    s.full_marks = request.form.get("full_marks", type=int) or 100
+    s.pass_marks = request.form.get("pass_marks", type=int) or 33
+    db.session.commit()
+    flash("Subject updated successfully!", "success")
+    return redirect(url_for("subjects"))
+
+
+@app.route("/subjects/<int:subject_id>/delete", methods=["POST"])
+@login_required
+def delete_subject(subject_id):
+    s = Subject.query.get_or_404(subject_id)
+    Mark.query.filter_by(subject_id=subject_id).delete()
+    db.session.delete(s)
+    db.session.commit()
+    flash("Subject deleted successfully!", "info")
+    return redirect(url_for("subjects"))
 
 
 @app.route("/marks/<int:exam_id>", methods=["GET", "POST"])
