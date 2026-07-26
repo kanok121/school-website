@@ -29,10 +29,14 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key"
 # SQLite file for running on your own computer.
 _database_url = os.environ.get("DATABASE_URL", "")
 if _database_url:
-    # Render (and some other hosts) provide URLs starting with "postgres://",
-    # but SQLAlchemy 2.x requires the "postgresql://" scheme.
+    # Render (and some other hosts) provide URLs starting with "postgres://" or
+    # "postgresql://", but we want SQLAlchemy to use the psycopg3 driver (better
+    # compatibility with newer Python versions than psycopg2), which needs the
+    # "postgresql+psycopg://" scheme.
     if _database_url.startswith("postgres://"):
-        _database_url = _database_url.replace("postgres://", "postgresql://", 1)
+        _database_url = _database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif _database_url.startswith("postgresql://"):
+        _database_url = _database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = _database_url
 else:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "school.db")
