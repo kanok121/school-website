@@ -8,6 +8,45 @@ body {
   background: linear-gradient(90deg, #1e3a8a, #2563eb);
 }
 
+.app-navbar .nav-link {
+  font-size: 0.92rem;
+  padding: 0.5rem 0.85rem !important;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus {
+  background: rgba(255,255,255,0.12);
+  color: #fff !important;
+}
+
+.app-navbar .dropdown-toggle::after {
+  vertical-align: 0.15em;
+}
+
+.app-navbar .dropdown-menu {
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.app-navbar .dropdown-item {
+  border-radius: 6px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.92rem;
+}
+
+.app-navbar .dropdown-item:hover {
+  background: #eef2ff;
+}
+
+.app-navbar .navbar-brand {
+  font-size: 1.05rem;
+}
+
 .login-body {
   min-height: 100vh;
   background: linear-gradient(135deg, #1e3a8a, #2563eb);
