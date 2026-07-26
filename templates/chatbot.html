@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}AI Chatbot{% endblock %}
+{% block content %}
+<h4 class="mb-1">AI Chatbot</h4>
+<p class="text-muted small mb-4">Ask questions about your school's data in plain English — e.g. "How many students are in Class 5?" or "Who was absent today?"</p>
+
+{% if not ai_configured %}
+<div class="alert alert-warning">
+  <strong>AI Chatbot is not set up yet.</strong> An administrator needs to add an
+  <code>ANTHROPIC_API_KEY</code> environment variable on the hosting platform (see README section
+  "AI Chatbot Setup"). Get a free key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+</div>
+{% endif %}
+
+<div class="card p-3">
+  <div id="chatWindow" style="height: 400px; overflow-y: auto;" class="mb-3 p-2 border rounded bg-light"></div>
+  <form id="chatForm" class="d-flex gap-2">
+    <input type="text" id="chatInput" class="form-control" placeholder="Type your question..." {{ 'disabled' if not ai_configured }}>
+    <button type="submit" class="btn btn-primary" {{ 'disabled' if not ai_configured }}>Send</button>
+  </form>
+</div>
+
+<script>
+const chatWindow = document.getElementById('chatWindow');
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+
+function addMessage(text, sender) {
+  const div = document.createElement('div');
+  div.className = 'mb-2';
+  div.innerHTML = `<strong>${sender === 'user' ? 'You' : 'AI'}:</strong> ${text}`;
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const question = chatInput.value.trim();
+  if (!question) return;
+  addMessage(question, 'user');
+  chatInput.value = '';
+  addMessage('<em>Thinking...</em>', 'ai');
+
+  try {
+    const res = await fetch('/api/chatbot/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question })
+    });
+    const data = await res.json();
+    chatWindow.lastChild.remove();
+    if (data.error) {
+      addMessage(data.error, 'ai');
+    } else {
+      addMessage(data.answer, 'ai');
+    }
+  } catch (err) {
+    chatWindow.lastChild.remove();
+    addMessage('Something went wrong. Please try again.', 'ai');
+  }
+});
+</script>
+{% endblock %}

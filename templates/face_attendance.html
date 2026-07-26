@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Face Attendance{% endblock %}
+{% block content %}
+<h4 class="mb-3">Face Recognition Attendance</h4>
+<p class="text-muted small">Select a class, then point the camera at students one at a time — attendance is marked automatically when a registered face is recognized.</p>
+
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="class_id" class="form-select" onchange="this.form.submit()">
+      <option value="">-- Select Class --</option>
+      {% for c in classes %}
+        <option value="{{ c.id }}" {% if selected_class == c.id %}selected{% endif %}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+{% if not selected_class %}
+<p class="text-muted">Select a class to begin.</p>
+{% elif student_count == 0 %}
+<p class="text-muted">No students in this class have a registered face yet. Go to a student's edit page or
+<a href="{{ url_for('students') }}">Students list</a> — face registration is done per-student
+(visit <code>/students/&lt;id&gt;/register_face</code>, or add a "Register Face" button from the student list).</p>
+{% else %}
+<div class="row">
+  <div class="col-md-6">
+    <video id="video" width="100%" autoplay muted class="rounded bg-dark"></video>
+  </div>
+  <div class="col-md-6">
+    <div id="status" class="alert alert-info">Loading face detection model...</div>
+    <h6>Marked Present Today:</h6>
+    <ul id="markedList" class="list-group"></ul>
+  </div>
+</div>
+
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const MODEL_URL = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
+const video = document.getElementById('video');
+const statusEl = document.getElementById('status');
+const markedList = document.getElementById('markedList');
+const students = {{ students_json | safe }};
+const markedToday = new Set();
+
+const labeledDescriptors = students.map(s =>
+  new faceapi.LabeledFaceDescriptors(String(s.id), [new Float32Array(s.descriptor)])
+);
+const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
+
+async function setup() {
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+  const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+  video.srcObject = stream;
+  statusEl.textContent = 'Scanning for faces...';
+
+  setInterval(detectLoop, 2000);
+}
+
+async function detectLoop() {
+  const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks().withFaceDescriptor();
+
+  if (!detection) {
+    statusEl.textContent = 'Scanning for faces...';
+    return;
+  }
+
+  const match = faceMatcher.findBestMatch(detection.descriptor);
+  if (match.label === 'unknown') {
+    statusEl.textContent = 'Face detected but not recognized.';
+    return;
+  }
+
+  const studentId = match.label;
+  if (markedToday.has(studentId)) {
+    const student = students.find(s => String(s.id) === studentId);
+    statusEl.textContent = `${student.name} already marked present.`;
+    return;
+  }
+
+  const res = await fetch("/api/attendance/face_mark", {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ student_id: parseInt(studentId) })
+  });
+  const data = await res.json();
+  if (data.student_name) {
+    markedToday.add(studentId);
+    statusEl.textContent = `✅ Marked present: ${data.student_name}`;
+    const li = document.createElement('li');
+    li.className = 'list-group-item';
+    li.textContent = data.student_name;
+    markedList.appendChild(li);
+  }
+}
+
+setup().catch(err => {
+  statusEl.textContent = '⚠️ Could not access camera: ' + err.message;
+});
+</script>
+{% endif %}
+{% endblock %}

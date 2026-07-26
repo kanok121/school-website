@@ -60,4 +60,19 @@
     <a href="{{ url_for('attendance_teachers') }}" class="btn btn-outline-warning w-100 py-3">✅ Take Teacher Attendance</a>
   </div>
 </div>
+
+<div class="row mt-3 g-3">
+  <div class="col-md-3">
+    <a href="{{ url_for('insights') }}" class="btn btn-outline-dark w-100 py-3">🧠 AI Insights</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('chatbot_page') }}" class="btn btn-outline-dark w-100 py-3">💬 AI Chatbot</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('face_attendance_page') }}" class="btn btn-outline-dark w-100 py-3">📷 Face Attendance</a>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('notifications') }}" class="btn btn-outline-dark w-100 py-3">📨 Auto Notifications</a>
+  </div>
+</div>
 {% endblock %}

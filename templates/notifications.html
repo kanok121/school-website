@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<h4 class="mb-1">Auto-Generated Guardian Notifications</h4>
+<p class="text-muted small mb-4">Automatically drafted messages for absent students on the selected date — copy and send via SMS, WhatsApp, or email.</p>
+
+<form method="GET" class="row g-2 mb-4">
+  <div class="col-auto">
+    <input type="date" name="date" value="{{ att_date }}" class="form-control" onchange="this.form.submit()">
+  </div>
+</form>
+
+{% if messages %}
+  {% for item in messages %}
+  <div class="card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <strong>{{ item.student.name }}</strong>
+        <span class="text-muted small"> (Roll: {{ item.student.roll or '-' }})</span>
+      </div>
+      <button class="btn btn-sm btn-outline-primary copy-btn" data-text="{{ item.message }}">Copy</button>
+    </div>
+    <p class="mt-2 mb-0">{{ item.message }}</p>
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="text-muted">No absent students found for {{ att_date }}.</p>
+{% endif %}
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(btn.dataset.text);
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+});
+</script>
+{% endblock %}

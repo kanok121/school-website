@@ -41,6 +41,9 @@
       <td>{{ s.phone or '-' }}</td>
       <td>
         <a href="{{ url_for('edit_student', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <a href="{{ url_for('register_face_page', student_id=s.id) }}" class="btn btn-sm btn-outline-info">
+          {{ '📷 Re-register Face' if s.face_descriptor else '📷 Register Face' }}
+        </a>
         <form method="POST" action="{{ url_for('delete_student', student_id=s.id) }}" class="d-inline" onsubmit="return confirm('Are you sure?');">
           <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
         </form>

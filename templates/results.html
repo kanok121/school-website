@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block content %}
+<h4 class="mb-3">Results — {{ exam.name }} ({{ exam.school_class.name if exam.school_class else '' }})</h4>
+
+<div class="table-responsive">
+<table class="table table-striped bg-white">
+  <thead>
+    <tr><th>Roll</th><th>Name</th><th>Total</th><th>Percentage</th><th>Status</th><th>Failed Subjects</th></tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr class="{{ 'table-danger' if r.status == 'Fail' else '' }}">
+      <td>{{ r.student.roll or '-' }}</td>
+      <td>{{ r.student.name }}</td>
+      <td>{{ r.total }} / {{ r.full_total }}</td>
+      <td>{{ r.percentage }}%</td>
+      <td>
+        {% if r.status == 'Pass' %}
+          <span class="badge bg-success">Pass</span>
+        {% elif r.status == 'Fail' %}
+          <span class="badge bg-danger">Fail</span>
+        {% else %}
+          <span class="badge bg-secondary">N/A</span>
+        {% endif %}
+      </td>
+      <td>{{ r.failed_subjects | join(', ') if r.failed_subjects else '-' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center text-muted">No results yet — enter marks first</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<a href="{{ url_for('enter_marks', exam_id=exam.id) }}" class="btn btn-outline-primary">Edit Marks</a>
+<a href="{{ url_for('exams') }}" class="btn btn-secondary">Back to Exams</a>
+{% endblock %}

@@ -1,5 +1,6 @@
 import os
-from datetime import date, datetime
+import json
+from datetime import date, datetime, timedelta
 from functools import wraps
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
@@ -10,6 +11,11 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
@@ -24,7 +30,11 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # Simple API key for mobile / external API access (change this!)
 API_KEY = os.environ.get("SCHOOL_API_KEY", "mojidpur-secret-key-2026")
 
+# Optional: for the AI Chatbot feature. Get a free key at https://console.anthropic.com
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
 db = SQLAlchemy(app)
+
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in."
@@ -67,11 +77,6 @@ class Section(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
 
 
-class Subject(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)  # e.g. "Bangla", "Math"
-
-
 class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -84,9 +89,42 @@ class Student(db.Model):
     address = db.Column(db.String(300))
     admission_date = db.Column(db.String(20))
     photo = db.Column(db.String(200))
+    face_descriptor = db.Column(db.Text)  # JSON-encoded face-api.js descriptor (128 floats)
 
     school_class = db.relationship("SchoolClass")
     section = db.relationship("Section")
+
+
+class Subject(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
+    full_marks = db.Column(db.Integer, default=100)
+    pass_marks = db.Column(db.Integer, default=33)
+
+    school_class = db.relationship("SchoolClass")
+
+
+class Exam(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)  # e.g. "Half Yearly 2026"
+    class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
+    exam_date = db.Column(db.String(20))
+
+    school_class = db.relationship("SchoolClass")
+
+
+class Mark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    exam_id = db.Column(db.Integer, db.ForeignKey("exam.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
+    marks_obtained = db.Column(db.Float, default=0)
+
+    exam = db.relationship("Exam")
+    student = db.relationship("Student")
+    subject = db.relationship("Subject")
+    __table_args__ = (db.UniqueConstraint("exam_id", "student_id", "subject_id", name="uq_exam_student_subject"),)
 
 
 class Teacher(db.Model):
@@ -100,30 +138,12 @@ class Teacher(db.Model):
     photo = db.Column(db.String(200))
 
 
-class TeacherAssignment(db.Model):
-    """Which teacher teaches which subject in which class."""
-    id = db.Column(db.Integer, primary_key=True)
-    teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey("school_class.id"), nullable=False)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subject.id"), nullable=False)
-
-    teacher = db.relationship("Teacher", backref=db.backref("assignments", cascade="all, delete-orphan"))
-    school_class = db.relationship("SchoolClass")
-    subject = db.relationship("Subject")
-
-    __table_args__ = (
-        db.UniqueConstraint("teacher_id", "class_id", "subject_id", name="uq_teacher_class_subject"),
-    )
-
-
 class StudentAttendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey("student.id"), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), default="Present")  # Present/Absent/Leave
-
     student = db.relationship("Student")
-
     __table_args__ = (db.UniqueConstraint("student_id", "date", name="uq_student_date"),)
 
 
@@ -132,9 +152,7 @@ class TeacherAttendance(db.Model):
     teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id"), nullable=False)
     date = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), default="Present")
-
     teacher = db.relationship("Teacher")
-
     __table_args__ = (db.UniqueConstraint("teacher_id", "date", name="uq_teacher_date"),)
 
 
@@ -340,84 +358,6 @@ def delete_teacher(teacher_id):
     return redirect(url_for("teachers"))
 
 
-# ----------------------- SUBJECTS (WEB) -----------------------
-
-@app.route("/subjects", methods=["GET", "POST"])
-@login_required
-def subjects():
-    if request.method == "POST":
-        name = request.form.get("subject_name", "").strip()
-        if name:
-            existing = Subject.query.filter(db.func.lower(Subject.name) == name.lower()).first()
-            if existing:
-                flash("This subject already exists!", "warning")
-            else:
-                db.session.add(Subject(name=name))
-                db.session.commit()
-                flash("Subject added successfully!", "success")
-        return redirect(url_for("subjects"))
-    all_subjects = Subject.query.order_by(Subject.name).all()
-    return render_template("subjects.html", subjects=all_subjects)
-
-
-@app.route("/subjects/<int:subject_id>/delete", methods=["POST"])
-@login_required
-def delete_subject(subject_id):
-    s = Subject.query.get_or_404(subject_id)
-    db.session.delete(s)
-    db.session.commit()
-    flash("Subject deleted.", "info")
-    return redirect(url_for("subjects"))
-
-
-# ----------------------- TEACHER CLASS/SUBJECT ASSIGNMENT (WEB) -----------------------
-
-@app.route("/teachers/<int:teacher_id>/assignments", methods=["GET", "POST"])
-@login_required
-def teacher_assignments(teacher_id):
-    teacher = Teacher.query.get_or_404(teacher_id)
-    classes = SchoolClass.query.all()
-    all_subjects = Subject.query.order_by(Subject.name).all()
-
-    if request.method == "POST":
-        class_id = request.form.get("class_id", type=int)
-        subject_id = request.form.get("subject_id", type=int)
-        if not classes:
-            flash("Please add a Class first (go to Classes page).", "warning")
-        elif not all_subjects:
-            flash("Please add a Subject first (go to Subjects page).", "warning")
-        elif class_id and subject_id:
-            existing = TeacherAssignment.query.filter_by(
-                teacher_id=teacher_id, class_id=class_id, subject_id=subject_id
-            ).first()
-            if existing:
-                flash("This class + subject is already assigned to this teacher!", "warning")
-            else:
-                db.session.add(TeacherAssignment(
-                    teacher_id=teacher_id, class_id=class_id, subject_id=subject_id
-                ))
-                db.session.commit()
-                flash("Assignment added successfully!", "success")
-        return redirect(url_for("teacher_assignments", teacher_id=teacher_id))
-
-    assignments = TeacherAssignment.query.filter_by(teacher_id=teacher_id).all()
-    return render_template(
-        "teacher_assignments.html",
-        teacher=teacher, classes=classes, subjects=all_subjects, assignments=assignments
-    )
-
-
-@app.route("/teacher_assignments/<int:assignment_id>/delete", methods=["POST"])
-@login_required
-def delete_teacher_assignment(assignment_id):
-    a = TeacherAssignment.query.get_or_404(assignment_id)
-    teacher_id = a.teacher_id
-    db.session.delete(a)
-    db.session.commit()
-    flash("Assignment removed.", "info")
-    return redirect(url_for("teacher_assignments", teacher_id=teacher_id))
-
-
 # ----------------------- CLASSES / SECTIONS (WEB) -----------------------
 
 @app.route("/classes", methods=["GET", "POST"])
@@ -477,9 +417,9 @@ def attendance_students():
     students_list = []
     if class_id:
         students_list = Student.query.filter_by(class_id=class_id).order_by(Student.roll).all()
-    existing_att = {a.student_id: a.status for a in StudentAttendance.query.filter_by(date=att_date).all()}
-    for s in students_list:
-        s.current_status = existing_att.get(s.id, "Present")
+        existing_att = {a.student_id: a.status for a in StudentAttendance.query.filter_by(date=att_date).all()}
+        for s in students_list:
+            s.current_status = existing_att.get(s.id, "Present")
 
     return render_template(
         "attendance_student.html", classes=classes, students=students_list,
@@ -515,8 +455,304 @@ def attendance_teachers():
     return render_template("attendance_teacher.html", teachers=all_teachers, att_date=att_date)
 
 
+# ----------------------- EXAMS & MARKS -----------------------
+
+@app.route("/exams", methods=["GET", "POST"])
+@login_required
+def exams():
+    if request.method == "POST":
+        e = Exam(
+            name=request.form["name"],
+            class_id=request.form.get("class_id", type=int),
+            exam_date=request.form.get("exam_date"),
+        )
+        db.session.add(e)
+        db.session.commit()
+        flash("Exam created successfully!", "success")
+        return redirect(url_for("exams"))
+    all_exams = Exam.query.order_by(Exam.id.desc()).all()
+    classes = SchoolClass.query.all()
+    return render_template("exams.html", exams=all_exams, classes=classes)
+
+
+@app.route("/subjects", methods=["GET", "POST"])
+@login_required
+def subjects():
+    if request.method == "POST":
+        s = Subject(
+            name=request.form["name"],
+            class_id=request.form.get("class_id", type=int),
+            full_marks=request.form.get("full_marks", type=int) or 100,
+            pass_marks=request.form.get("pass_marks", type=int) or 33,
+        )
+        db.session.add(s)
+        db.session.commit()
+        flash("Subject added successfully!", "success")
+        return redirect(url_for("subjects"))
+    all_subjects = Subject.query.order_by(Subject.class_id).all()
+    classes = SchoolClass.query.all()
+    return render_template("subjects.html", subjects=all_subjects, classes=classes)
+
+
+@app.route("/marks/<int:exam_id>", methods=["GET", "POST"])
+@login_required
+def enter_marks(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    subjects_list = Subject.query.filter_by(class_id=exam.class_id).all()
+    students_list = Student.query.filter_by(class_id=exam.class_id).order_by(Student.roll).all()
+
+    if request.method == "POST":
+        for s in students_list:
+            for subj in subjects_list:
+                field = f"marks_{s.id}_{subj.id}"
+                val = request.form.get(field)
+                if val is None or val == "":
+                    continue
+                try:
+                    val = float(val)
+                except ValueError:
+                    continue
+                existing = Mark.query.filter_by(exam_id=exam.id, student_id=s.id, subject_id=subj.id).first()
+                if existing:
+                    existing.marks_obtained = val
+                else:
+                    db.session.add(Mark(exam_id=exam.id, student_id=s.id, subject_id=subj.id, marks_obtained=val))
+        db.session.commit()
+        flash("Marks saved successfully!", "success")
+        return redirect(url_for("enter_marks", exam_id=exam.id))
+
+    existing_marks = {(m.student_id, m.subject_id): m.marks_obtained for m in Mark.query.filter_by(exam_id=exam.id).all()}
+    return render_template(
+        "marks_entry.html", exam=exam, subjects=subjects_list,
+        students=students_list, existing_marks=existing_marks
+    )
+
+
+@app.route("/results/<int:exam_id>")
+@login_required
+def results(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    subjects_list = Subject.query.filter_by(class_id=exam.class_id).all()
+    students_list = Student.query.filter_by(class_id=exam.class_id).order_by(Student.roll).all()
+    marks = {(m.student_id, m.subject_id): m.marks_obtained for m in Mark.query.filter_by(exam_id=exam.id).all()}
+
+    rows = []
+    for s in students_list:
+        total = 0
+        full_total = 0
+        failed_subjects = []
+        for subj in subjects_list:
+            obtained = marks.get((s.id, subj.id))
+            if obtained is not None:
+                total += obtained
+                full_total += subj.full_marks
+                if obtained < subj.pass_marks:
+                    failed_subjects.append(subj.name)
+        percentage = round((total / full_total) * 100, 1) if full_total else 0
+        result_status = "Fail" if failed_subjects else ("Pass" if full_total else "N/A")
+        rows.append({
+            "student": s, "total": total, "full_total": full_total,
+            "percentage": percentage, "status": result_status,
+            "failed_subjects": failed_subjects,
+        })
+    rows.sort(key=lambda r: -r["percentage"])
+    return render_template("results.html", exam=exam, rows=rows)
+
+
+# ----------------------- AI INSIGHTS (rule-based analytics) -----------------------
+
+@app.route("/insights")
+@login_required
+def insights():
+    """Automated, rule-based analysis of attendance and exam data.
+    (No external AI call here — this is our own logic crunching the numbers.)"""
+    since = (date.today() - timedelta(days=30)).isoformat()
+    today = date.today().isoformat()
+
+    low_attendance = []
+    for s in Student.query.all():
+        records = StudentAttendance.query.filter(
+            StudentAttendance.student_id == s.id, StudentAttendance.date >= since
+        ).all()
+        if not records:
+            continue
+        present = sum(1 for r in records if r.status == "Present")
+        pct = round((present / len(records)) * 100, 1)
+        if pct < 75:
+            low_attendance.append({"student": s, "percentage": pct, "days_recorded": len(records)})
+    low_attendance.sort(key=lambda x: x["percentage"])
+
+    weak_performers = []
+    latest_exam = Exam.query.order_by(Exam.id.desc()).first()
+    if latest_exam:
+        subjects_list = Subject.query.filter_by(class_id=latest_exam.class_id).all()
+        students_list = Student.query.filter_by(class_id=latest_exam.class_id).all()
+        marks = {(m.student_id, m.subject_id): m.marks_obtained for m in Mark.query.filter_by(exam_id=latest_exam.id).all()}
+        for s in students_list:
+            weak_subjects = []
+            for subj in subjects_list:
+                obtained = marks.get((s.id, subj.id))
+                if obtained is not None and obtained < subj.pass_marks:
+                    weak_subjects.append(f"{subj.name} ({obtained}/{subj.full_marks})")
+            if weak_subjects:
+                weak_performers.append({"student": s, "weak_subjects": weak_subjects})
+
+    return render_template(
+        "insights.html", low_attendance=low_attendance,
+        weak_performers=weak_performers, latest_exam=latest_exam, today=today
+    )
+
+
+# ----------------------- AUTO NOTIFICATION GENERATOR (template-based, no external AI) -----------------------
+
+@app.route("/notifications")
+@login_required
+def notifications():
+    att_date = request.args.get("date") or date.today().isoformat()
+    inst = Institute.query.first()
+    absent_today = StudentAttendance.query.filter_by(date=att_date, status="Absent").all()
+
+    messages = []
+    for rec in absent_today:
+        s = rec.student
+        class_name = s.school_class.name if s.school_class else ""
+        msg = (
+            f"Dear Guardian, this is to inform you that your child {s.name} "
+            f"(Roll: {s.roll or '-'}, {class_name}) was ABSENT from {inst.name if inst else 'school'} "
+            f"on {att_date}. Please contact the school if this is unexpected. Thank you."
+        )
+        messages.append({"student": s, "message": msg})
+
+    return render_template("notifications.html", messages=messages, att_date=att_date)
+
+
+# ----------------------- AI CHATBOT (real LLM via Anthropic API) -----------------------
+
+@app.route("/chatbot")
+@login_required
+def chatbot_page():
+    ai_configured = bool(ANTHROPIC_API_KEY and anthropic is not None)
+    return render_template("chatbot.html", ai_configured=ai_configured)
+
+
+@app.route("/api/chatbot/ask", methods=["POST"])
+@login_required
+def chatbot_ask():
+    if not ANTHROPIC_API_KEY or anthropic is None:
+        return jsonify({
+            "error": "AI chatbot is not configured yet. An administrator needs to add an "
+                     "ANTHROPIC_API_KEY environment variable (see README)."
+        }), 400
+
+    payload = request.get_json(force=True)
+    question = (payload.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "Please type a question."}), 400
+
+    # Build a small factual context from the database so the AI can answer
+    # school-specific questions accurately instead of guessing.
+    inst = Institute.query.first()
+    total_students = Student.query.count()
+    total_teachers = Teacher.query.count()
+    classes_summary = []
+    for c in SchoolClass.query.all():
+        count = Student.query.filter_by(class_id=c.id).count()
+        classes_summary.append(f"{c.name}: {count} students")
+
+    today = date.today().isoformat()
+    present_today = StudentAttendance.query.filter_by(date=today, status="Present").count()
+    absent_today = StudentAttendance.query.filter_by(date=today, status="Absent").count()
+
+    context = f"""
+School name: {inst.name if inst else 'N/A'}
+Institute ID: {inst.institute_id if inst else 'N/A'}
+Academic year: {inst.academic_year if inst else 'N/A'}
+Total students: {total_students}
+Total teachers: {total_teachers}
+Classes: {'; '.join(classes_summary) if classes_summary else 'None yet'}
+Today's date: {today}
+Present today: {present_today}
+Absent today: {absent_today}
+""".strip()
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        response = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=500,
+            system=(
+                "You are a helpful assistant for a school management system called "
+                f"'{inst.name if inst else 'the school'}'. Answer questions using the "
+                "school data provided below. If the data doesn't contain the answer, say so "
+                "honestly instead of guessing. Keep answers short and clear.\n\n"
+                f"Current school data:\n{context}"
+            ),
+            messages=[{"role": "user", "content": question}],
+        )
+        answer = "".join(block.text for block in response.content if block.type == "text")
+        return jsonify({"answer": answer})
+    except Exception as exc:
+        return jsonify({"error": f"AI request failed: {str(exc)}"}), 500
+
+
+# ----------------------- FACE RECOGNITION ATTENDANCE (client-side AI via face-api.js) -----------------------
+
+@app.route("/students/<int:student_id>/register_face", methods=["GET"])
+@login_required
+def register_face_page(student_id):
+    s = Student.query.get_or_404(student_id)
+    return render_template("register_face.html", student=s)
+
+
+@app.route("/api/students/<int:student_id>/save_face", methods=["POST"])
+@login_required
+def save_face(student_id):
+    s = Student.query.get_or_404(student_id)
+    payload = request.get_json(force=True)
+    descriptor = payload.get("descriptor")
+    if not descriptor or not isinstance(descriptor, list):
+        return jsonify({"error": "No face descriptor received."}), 400
+    s.face_descriptor = json.dumps(descriptor)
+    db.session.commit()
+    return jsonify({"message": "Face registered successfully."})
+
+
+@app.route("/attendance/face")
+@login_required
+def face_attendance_page():
+    classes = SchoolClass.query.all()
+    class_id = request.args.get("class_id", type=int)
+    students_list = []
+    if class_id:
+        students_list = Student.query.filter_by(class_id=class_id).filter(Student.face_descriptor.isnot(None)).all()
+    students_data = [
+        {"id": s.id, "name": s.name, "roll": s.roll, "descriptor": json.loads(s.face_descriptor)}
+        for s in students_list
+    ]
+    return render_template(
+        "face_attendance.html", classes=classes, selected_class=class_id,
+        students_json=json.dumps(students_data), student_count=len(students_data)
+    )
+
+
+@app.route("/api/attendance/face_mark", methods=["POST"])
+@login_required
+def face_mark_attendance():
+    payload = request.get_json(force=True)
+    student_id = payload.get("student_id")
+    att_date = date.today().isoformat()
+    existing = StudentAttendance.query.filter_by(student_id=student_id, date=att_date).first()
+    if existing:
+        existing.status = "Present"
+    else:
+        db.session.add(StudentAttendance(student_id=student_id, date=att_date, status="Present"))
+    db.session.commit()
+    student = Student.query.get(student_id)
+    return jsonify({"message": "marked", "student_name": student.name if student else None})
+
+
 # ----------------------- REST API (for mobile app / external use) -----------------------
-# All /api/v1/* endpoints require header: X-API-KEY: <your key>
+# All /api/v1/* endpoints require header:  X-API-KEY: <your key>
 
 @app.route("/api/v1/students", methods=["GET"])
 @api_key_required
@@ -564,17 +800,6 @@ def api_teachers():
         "phone": t.phone, "email": t.email, "address": t.address,
         "photo": url_for("static", filename=f"uploads/{t.photo}", _external=True) if t.photo else None
     } for t in Teacher.query.all()]
-    return jsonify(data)
-
-
-@app.route("/api/v1/teachers/<int:teacher_id>/assignments", methods=["GET"])
-@api_key_required
-def api_teacher_assignments(teacher_id):
-    assignments = TeacherAssignment.query.filter_by(teacher_id=teacher_id).all()
-    data = [{
-        "class": a.school_class.name,
-        "subject": a.subject.name
-    } for a in assignments]
     return jsonify(data)
 
 

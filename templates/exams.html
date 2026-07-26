@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Exams{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4>Exams</h4>
+  <a href="{{ url_for('subjects') }}" class="btn btn-outline-secondary">Manage Subjects</a>
+</div>
+
+<div class="card p-3 mb-4">
+  <form method="POST" class="row g-2">
+    <div class="col-md-4">
+      <input type="text" name="name" class="form-control" placeholder="Exam name (e.g. Half Yearly 2026)" required>
+    </div>
+    <div class="col-md-3">
+      <select name="class_id" class="form-select" required>
+        <option value="">-- Select Class --</option>
+        {% for c in classes %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <input type="date" name="exam_date" class="form-control">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100">➕ Create Exam</button>
+    </div>
+  </form>
+</div>
+
+<div class="table-responsive">
+<table class="table table-striped bg-white">
+  <thead><tr><th>Exam Name</th><th>Class</th><th>Date</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for e in exams %}
+    <tr>
+      <td>{{ e.name }}</td>
+      <td>{{ e.school_class.name if e.school_class else '-' }}</td>
+      <td>{{ e.exam_date or '-' }}</td>
+      <td>
+        <a href="{{ url_for('enter_marks', exam_id=e.id) }}" class="btn btn-sm btn-outline-primary">Enter Marks</a>
+        <a href="{{ url_for('results', exam_id=e.id) }}" class="btn btn-sm btn-outline-success">View Results</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center text-muted">No exams created yet</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

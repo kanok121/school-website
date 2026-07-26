@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}AI Insights{% endblock %}
+{% block content %}
+<h4 class="mb-1">AI Insights</h4>
+<p class="text-muted small mb-4">Automated analysis of the last 30 days of attendance and the most recent exam — flagged automatically so you don't have to dig through records manually.</p>
+
+<div class="card p-3 mb-4">
+  <h5>⚠️ Low Attendance (below 75%, last 30 days)</h5>
+  {% if low_attendance %}
+  <div class="table-responsive">
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Name</th><th>Class</th><th>Attendance %</th><th>Days Recorded</th></tr></thead>
+    <tbody>
+      {% for item in low_attendance %}
+      <tr>
+        <td>{{ item.student.name }}</td>
+        <td>{{ item.student.school_class.name if item.student.school_class else '-' }}</td>
+        <td><span class="badge bg-danger">{{ item.percentage }}%</span></td>
+        <td>{{ item.days_recorded }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">No students with low attendance in the last 30 days. 🎉</p>
+  {% endif %}
+</div>
+
+<div class="card p-3">
+  <h5>📉 Weak Performers {{ '(' + latest_exam.name + ')' if latest_exam else '' }}</h5>
+  {% if not latest_exam %}
+  <p class="text-muted mb-0">No exams created yet — create an exam and enter marks to see this analysis.</p>
+  {% elif weak_performers %}
+  <div class="table-responsive">
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Name</th><th>Class</th><th>Failed Subjects</th></tr></thead>
+    <tbody>
+      {% for item in weak_performers %}
+      <tr>
+        <td>{{ item.student.name }}</td>
+        <td>{{ item.student.school_class.name if item.student.school_class else '-' }}</td>
+        <td>{{ item.weak_subjects | join(', ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="text-muted mb-0">No weak performers found in the latest exam. 🎉</p>
+  {% endif %}
+</div>
+{% endblock %}
