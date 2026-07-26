@@ -9,167 +9,273 @@
   <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-    * { font-family: 'Inter', sans-serif; }
-
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    html, body { height: 100%; }
     body.login-body {
-      min-height: 100vh;
       margin: 0;
-      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #3b82f6 100%);
-      background-size: 200% 200%;
-      animation: gradientMove 12s ease infinite;
-      position: relative;
-      overflow: hidden;
-    }
-
-    @keyframes gradientMove {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    body.login-body::before,
-    body.login-body::after {
-      content: "";
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      z-index: 0;
-    }
-
-    body.login-body::before {
-      width: 350px;
-      height: 350px;
-      top: -100px;
-      left: -100px;
-    }
-
-    body.login-body::after {
-      width: 250px;
-      height: 250px;
-      bottom: -80px;
-      right: -80px;
-    }
-
-    .login-card {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      max-width: 400px;
-      border: none;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.97);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-      padding: 2.5rem 2rem !important;
-      animation: cardEnter 0.6s ease;
-    }
-
-    @keyframes cardEnter {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .login-logo {
-      width: 64px;
-      height: 64px;
-      margin: 0 auto 12px;
-      background: linear-gradient(135deg, #2563eb, #1e3a8a);
-      border-radius: 16px;
+      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+      background: #eef2ff;
+      padding: 20px;
     }
 
-    .login-card h3 {
-      color: #111827;
+    .login-shell {
+      width: 100%;
+      max-width: 900px;
+      min-height: 560px;
+      display: flex;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 30px 70px rgba(30, 58, 138, 0.25);
+      animation: shellEnter 0.7s cubic-bezier(.16,1,.3,1);
+    }
+
+    @keyframes shellEnter {
+      from { opacity: 0; transform: translateY(24px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Left branding panel */
+    .brand-panel {
+      flex: 1 1 45%;
+      position: relative;
+      background: linear-gradient(160deg, #1e3a8a 0%, #2563eb 55%, #3b82f6 100%);
+      color: #fff;
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .brand-panel::before {
+      content: "";
+      position: absolute;
+      width: 320px; height: 320px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+      top: -120px; right: -120px;
+    }
+    .brand-panel::after {
+      content: "";
+      position: absolute;
+      width: 220px; height: 220px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+      bottom: -80px; left: -60px;
+    }
+
+    .brand-top { position: relative; z-index: 1; }
+    .brand-icon {
+      width: 56px; height: 56px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(4px);
+    }
+    .brand-panel h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 0.6rem;
+    }
+    .brand-panel p {
+      color: rgba(255,255,255,0.85);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      max-width: 300px;
+    }
+    .brand-features {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      margin-top: 1.5rem;
+    }
+    .brand-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.9);
+    }
+    .brand-feature .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #93c5fd;
+      flex-shrink: 0;
+    }
+    .brand-footer {
+      position: relative; z-index: 1;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    /* Right form panel */
+    .form-panel {
+      flex: 1 1 55%;
+      background: #ffffff;
+      padding: 3rem 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .form-panel h3 {
       font-weight: 700;
-      font-size: 1.4rem;
-      margin-bottom: 2px;
+      font-size: 1.5rem;
+      color: #111827;
+      margin-bottom: 0.3rem;
     }
-
-    .login-card p.text-muted {
+    .form-panel .subtitle {
+      color: #6b7280;
       font-size: 0.9rem;
-      color: #6b7280 !important;
+      margin-bottom: 1.8rem;
     }
 
     .form-label {
-      font-weight: 500;
-      font-size: 0.85rem;
+      font-weight: 600;
+      font-size: 0.8rem;
       color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
     }
 
+    .input-wrap {
+      position: relative;
+      margin-bottom: 1.2rem;
+    }
+    .input-wrap .icon {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 1rem;
+      pointer-events: none;
+    }
     .form-control {
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1.5px solid #e5e7eb;
-      padding: 0.65rem 0.9rem;
+      padding: 0.75rem 1rem 0.75rem 2.6rem;
       font-size: 0.95rem;
+      background: #f9fafb;
       transition: all 0.2s ease;
     }
-
     .form-control:focus {
+      background: #fff;
       border-color: #2563eb;
       box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
     }
+    .toggle-pass {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: #9ca3af; cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0;
+    }
+    .toggle-pass:hover { color: #2563eb; }
 
     .btn-primary {
       background: linear-gradient(135deg, #2563eb, #1e40af);
       border: none;
-      border-radius: 10px;
-      padding: 0.7rem;
+      border-radius: 12px;
+      padding: 0.8rem;
       font-weight: 600;
       font-size: 0.95rem;
       letter-spacing: 0.3px;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
     }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
+    .btn-primary:active { transform: translateY(0); }
 
     .alert {
       border-radius: 10px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       padding: 0.6rem 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 767px) {
+      .login-shell { flex-direction: column; min-height: 0; }
+      .brand-panel { padding: 2.2rem 1.8rem; }
+      .brand-features { display: none; }
+      .form-panel { padding: 2.2rem 1.8rem; }
     }
   </style>
 </head>
-<body class="login-body d-flex align-items-center justify-content-center">
-  <div class="login-card card p-4">
-    <div class="text-center mb-3">
-      <div class="login-logo">🏫</div>
-      <h3>Mojidpur Central School</h3>
-      <p class="text-muted mb-0">Login to the School Management System</p>
+<body class="login-body">
+  <div class="login-shell">
+    <div class="brand-panel">
+      <div class="brand-top">
+        <div class="brand-icon">🏫</div>
+        <h1>Mojidpur Central School</h1>
+        <p>Manage students, teachers, attendance and results — all in one secure place.</p>
+        <div class="brand-features">
+          <div class="brand-feature"><span class="dot"></span> Student & teacher records</div>
+          <div class="brand-feature"><span class="dot"></span> Daily attendance tracking</div>
+          <div class="brand-feature"><span class="dot"></span> Secure role-based access</div>
+        </div>
+      </div>
+      <div class="brand-footer">© School Management System</div>
     </div>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <form method="POST">
-      <div class="mb-3">
+
+    <div class="form-panel">
+      <h3>Welcome back</h3>
+      <p class="subtitle">Login to the School Management System</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST">
         <label class="form-label">Username</label>
-        <input type="text" name="username" class="form-control" required autofocus>
-      </div>
-      <div class="mb-3">
+        <div class="input-wrap">
+          <span class="icon">👤</span>
+          <input type="text" name="username" class="form-control" required autofocus>
+        </div>
+
         <label class="form-label">Password</label>
-        <input type="password" name="password" class="form-control" required>
-      </div>
-      <button type="submit" class="btn btn-primary w-100">Login</button>
-    </form>
+        <div class="input-wrap">
+          <span class="icon">🔒</span>
+          <input type="password" name="password" id="passwordField" class="form-control" required>
+          <button type="button" class="toggle-pass" onclick="togglePassword()">Show</button>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 mt-2">Login</button>
+      </form>
+    </div>
   </div>
+
   <script>
+    function togglePassword() {
+      const field = document.getElementById('passwordField');
+      const btn = document.querySelector('.toggle-pass');
+      if (field.type === 'password') {
+        field.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        field.type = 'password';
+        btn.textContent = 'Show';
+      }
+    }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
     }
