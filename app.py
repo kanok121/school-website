@@ -261,6 +261,29 @@ def settings():
     return render_template("settings.html", inst=inst)
 
 
+@app.route("/settings/password", methods=["POST"])
+@login_required
+def change_password():
+    current_pw = request.form.get("current_password", "")
+    new_pw = request.form.get("new_password", "")
+    confirm_pw = request.form.get("confirm_password", "")
+
+    if not current_user.check_password(current_pw):
+        flash("বর্তমান পাসওয়ার্ড ভুল হয়েছে।", "danger")
+        return redirect(url_for("settings"))
+    if len(new_pw) < 4:
+        flash("নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।", "danger")
+        return redirect(url_for("settings"))
+    if new_pw != confirm_pw:
+        flash("নতুন পাসওয়ার্ড দুটো মিলছে না।", "danger")
+        return redirect(url_for("settings"))
+
+    current_user.set_password(new_pw)
+    db.session.commit()
+    flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!", "success")
+    return redirect(url_for("settings"))
+
+
 # ----------------------- STUDENTS (WEB) -----------------------
 
 @app.route("/students")
@@ -1021,7 +1044,7 @@ def init_db():
             ))
         if not User.query.filter_by(username="admin").first():
             u = User(username="admin", role="admin")
-            u.set_password("admin123")
+            u.set_password("MCS1234")
             db.session.add(u)
         db.session.commit()
 
