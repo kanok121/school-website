@@ -1,4 +1,9 @@
-* { font-family: 'Noto Sans Bengali', sans-serif; }
+* { font-family: 'Inter', sans-serif; }
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
 
 body {
   background: #f2f4f8;
@@ -6,45 +11,26 @@ body {
 
 .app-navbar {
   background: linear-gradient(90deg, #1e3a8a, #2563eb);
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 .app-navbar .nav-link {
   font-size: 0.92rem;
-  padding: 0.5rem 0.85rem !important;
-  border-radius: 6px;
-  transition: background 0.15s ease;
-}
-
-.app-navbar .nav-link:hover,
-.app-navbar .nav-link:focus {
-  background: rgba(255,255,255,0.12);
-  color: #fff !important;
-}
-
-.app-navbar .dropdown-toggle::after {
-  vertical-align: 0.15em;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 .app-navbar .dropdown-menu {
-  border: none;
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-  padding: 0.4rem;
-  margin-top: 0.35rem;
+  border: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  font-size: 0.9rem;
 }
 
-.app-navbar .dropdown-item {
-  border-radius: 6px;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.92rem;
-}
-
+.app-navbar .dropdown-item:active,
 .app-navbar .dropdown-item:hover {
-  background: #eef2ff;
-}
-
-.app-navbar .navbar-brand {
-  font-size: 1.05rem;
+  background-color: #eef2ff;
 }
 
 .login-body {
