@@ -18,72 +18,53 @@
   {% for c in classes %}
   <div class="col-md-4">
     <div class="card p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="mb-0">{{ c.name }}</h5>
+      <div class="d-flex justify-content-between align-items-start">
+        <h5>{{ c.name }}</h5>
         <div>
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editClassModal{{ c.id }}">✏️</button>
-          <form method="POST" action="{{ url_for('delete_class', class_id=c.id) }}" class="d-inline" onsubmit="return confirm('আপনি কি নিশ্চিত এই ক্লাসটি মুছে ফেলতে চান?');">
-            <button type="submit" class="btn btn-sm btn-outline-danger">🗑️</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editClass{{ c.id }}">Edit</button>
+          <form method="POST" action="{{ url_for('delete_class', class_id=c.id) }}" class="d-inline" onsubmit="return confirm('Delete this class and all its sections? Students in it will keep their record but lose the class link.');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
           </form>
         </div>
       </div>
-      <div class="mb-2 d-flex flex-wrap gap-1">
-        {% for sec in c.sections %}
-          <span class="badge bg-secondary d-inline-flex align-items-center">
-            {{ sec.name }}
-            <button type="button" class="btn btn-sm text-white p-0 ms-2" style="line-height:1;" data-bs-toggle="modal" data-bs-target="#editSectionModal{{ sec.id }}" title="Edit">✏️</button>
-            <form method="POST" action="{{ url_for('delete_section', section_id=sec.id) }}" class="d-inline ms-1" onsubmit="return confirm('এই সেকশনটি মুছে ফেলতে চান?');">
-              <button type="submit" class="btn btn-sm text-white p-0" style="line-height:1;" title="Delete">✕</button>
-            </form>
-          </span>
 
-          <!-- Edit Section Modal -->
-          <div class="modal fade" id="editSectionModal{{ sec.id }}" tabindex="-1">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <form method="POST" action="{{ url_for('edit_section', section_id=sec.id) }}">
-                  <div class="modal-header">
-                    <h5 class="modal-title">Edit Section</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-                  <div class="modal-body">
-                    <input type="text" name="section_name" class="form-control" value="{{ sec.name }}" required>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
+      <div class="collapse mb-2" id="editClass{{ c.id }}">
+        <form method="POST" action="{{ url_for('edit_class', class_id=c.id) }}" class="d-flex gap-2 mt-1 mb-2">
+          <input type="text" name="class_name" class="form-control form-control-sm" value="{{ c.name }}" required>
+          <button type="submit" class="btn btn-sm btn-primary">Save</button>
+        </form>
+      </div>
+
+      <div class="mb-2">
+        {% for sec in c.sections %}
+          <span class="badge bg-secondary me-1 d-inline-flex align-items-center gap-1">
+            {{ sec.name }}
+            <button type="button" class="btn-close btn-close-white" style="font-size: 0.55rem;"
+                    data-bs-toggle="collapse" data-bs-target="#editSection{{ sec.id }}" title="Edit"></button>
+          </span>
         {% else %}
           <span class="text-muted small">No sections yet</span>
         {% endfor %}
       </div>
+
+      {% for sec in c.sections %}
+      <div class="collapse mb-2" id="editSection{{ sec.id }}">
+        <div class="d-flex gap-2">
+          <form method="POST" action="{{ url_for('edit_section', section_id=sec.id) }}" class="d-flex gap-1 flex-grow-1">
+            <input type="text" name="section_name" class="form-control form-control-sm" value="{{ sec.name }}" required>
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+          </form>
+          <form method="POST" action="{{ url_for('delete_section', section_id=sec.id) }}" onsubmit="return confirm('Delete this section?');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+
       <form method="POST" action="{{ url_for('add_section', class_id=c.id) }}" class="d-flex gap-2">
         <input type="text" name="section_name" class="form-control form-control-sm" placeholder="Section (e.g. A)" required>
         <button type="submit" class="btn btn-sm btn-outline-primary">Add</button>
       </form>
-    </div>
-  </div>
-
-  <!-- Edit Class Modal -->
-  <div class="modal fade" id="editClassModal{{ c.id }}" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <form method="POST" action="{{ url_for('edit_class', class_id=c.id) }}">
-          <div class="modal-header">
-            <h5 class="modal-title">Edit Class</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input type="text" name="class_name" class="form-control" value="{{ c.name }}" required>
-          </div>
-          <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Save</button>
-          </div>
-        </form>
-      </div>
     </div>
   </div>
   {% else %}

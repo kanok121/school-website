@@ -33,7 +33,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
 const MODEL_URL = "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
 const video = document.getElementById('video');
@@ -41,17 +41,16 @@ const statusEl = document.getElementById('status');
 const markedList = document.getElementById('markedList');
 const students = {{ students_json | safe }};
 const markedToday = new Set();
-let faceMatcher;
+
+const labeledDescriptors = students.map(s =>
+  new faceapi.LabeledFaceDescriptors(String(s.id), [new Float32Array(s.descriptor)])
+);
+const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
 
 async function setup() {
   await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-
-  const labeledDescriptors = students.map(s =>
-    new faceapi.LabeledFaceDescriptors(String(s.id), [new Float32Array(s.descriptor)])
-  );
-  faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.5);
 
   const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
   video.srcObject = stream;

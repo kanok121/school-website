@@ -23,24 +23,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key")
-
-# Use a persistent PostgreSQL database when DATABASE_URL is provided (e.g. Render's
-# free PostgreSQL add-on) so data survives redeploys/restarts. Falls back to a local
-# SQLite file for running on your own computer.
-_database_url = os.environ.get("DATABASE_URL", "")
-if _database_url:
-    # Render (and some other hosts) provide URLs starting with "postgres://" or
-    # "postgresql://", but we want SQLAlchemy to use the psycopg3 driver (better
-    # compatibility with newer Python versions than psycopg2), which needs the
-    # "postgresql+psycopg://" scheme.
-    if _database_url.startswith("postgres://"):
-        _database_url = _database_url.replace("postgres://", "postgresql+psycopg://", 1)
-    elif _database_url.startswith("postgresql://"):
-        _database_url = _database_url.replace("postgresql://", "postgresql+psycopg://", 1)
-    app.config["SQLALCHEMY_DATABASE_URI"] = _database_url
-else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "school.db")
-
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE_DIR, "school.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
@@ -224,6 +207,71 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    """Reset a password without email, using a shared admin reset code
+    (set via the ADMIN_RESET_CODE environment variable)."""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        reset_code = request.form.get("reset_code", "").strip()
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        correct_code = os.environ.get("ADMIN_RESET_CODE", "reset-school-2026")
+
+        if reset_code != correct_code:
+            flash("Incorrect reset code.", "danger")
+            return render_template("forgot_password.html")
+
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            flash("No account found with that username.", "danger")
+            return render_template("forgot_password.html")
+
+        if len(new_password) < 6:
+            flash("New password must be at least 6 characters.", "danger")
+            return render_template("forgot_password.html")
+
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("forgot_password.html")
+
+        user.set_password(new_password)
+        db.session.commit()
+        flash("Password reset successfully! You can now log in.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("forgot_password.html")
+
+
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not current_user.check_password(current_password):
+            flash("Current password is incorrect.", "danger")
+            return render_template("change_password.html")
+
+        if len(new_password) < 6:
+            flash("New password must be at least 6 characters.", "danger")
+            return render_template("change_password.html")
+
+        if new_password != confirm_password:
+            flash("New passwords do not match.", "danger")
+            return render_template("change_password.html")
+
+        current_user.set_password(new_password)
+        db.session.commit()
+        flash("Password changed successfully!", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("change_password.html")
+
+
 # ----------------------- DASHBOARD -----------------------
 
 @app.route("/")
@@ -242,50 +290,21 @@ def dashboard():
     )
 
 
-# ----------------------- SETTINGS (WEB) -----------------------
-
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
     inst = Institute.query.first()
-    if not inst:
-        inst = Institute()
-        db.session.add(inst)
-        db.session.commit()
     if request.method == "POST":
-        inst.name = request.form.get("name", "").strip() or inst.name
-        inst.address = request.form.get("address", "")
-        inst.phone = request.form.get("phone", "")
-        inst.email = request.form.get("email", "")
-        inst.institute_id = request.form.get("institute_id", "")
-        inst.academic_year = request.form.get("academic_year", "")
+        inst.name = request.form.get("name", inst.name).strip() or inst.name
+        inst.address = request.form.get("address", inst.address)
+        inst.phone = request.form.get("phone", inst.phone)
+        inst.email = request.form.get("email", inst.email)
+        inst.institute_id = request.form.get("institute_id", inst.institute_id)
+        inst.academic_year = request.form.get("academic_year", inst.academic_year)
         db.session.commit()
         flash("School information updated successfully!", "success")
         return redirect(url_for("settings"))
     return render_template("settings.html", inst=inst)
-
-
-@app.route("/settings/password", methods=["POST"])
-@login_required
-def change_password():
-    current_pw = request.form.get("current_password", "")
-    new_pw = request.form.get("new_password", "")
-    confirm_pw = request.form.get("confirm_password", "")
-
-    if not current_user.check_password(current_pw):
-        flash("বর্তমান পাসওয়ার্ড ভুল হয়েছে।", "danger")
-        return redirect(url_for("settings"))
-    if len(new_pw) < 4:
-        flash("নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে।", "danger")
-        return redirect(url_for("settings"))
-    if new_pw != confirm_pw:
-        flash("নতুন পাসওয়ার্ড দুটো মিলছে না।", "danger")
-        return redirect(url_for("settings"))
-
-    current_user.set_password(new_pw)
-    db.session.commit()
-    flash("পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!", "success")
-    return redirect(url_for("settings"))
 
 
 # ----------------------- STUDENTS (WEB) -----------------------
@@ -437,6 +456,17 @@ def classes():
     return render_template("classes.html", classes=all_classes)
 
 
+@app.route("/classes/<int:class_id>/add_section", methods=["POST"])
+@login_required
+def add_section(class_id):
+    name = request.form.get("section_name", "").strip()
+    if name:
+        db.session.add(Section(name=name, class_id=class_id))
+        db.session.commit()
+        flash("Section added successfully!", "success")
+    return redirect(url_for("classes"))
+
+
 @app.route("/classes/<int:class_id>/edit", methods=["POST"])
 @login_required
 def edit_class(class_id):
@@ -453,28 +483,9 @@ def edit_class(class_id):
 @login_required
 def delete_class(class_id):
     c = SchoolClass.query.get_or_404(class_id)
-    linked = (
-        Student.query.filter_by(class_id=class_id).count()
-        or Subject.query.filter_by(class_id=class_id).count()
-        or Exam.query.filter_by(class_id=class_id).count()
-    )
-    if linked:
-        flash("এই ক্লাসে শিক্ষার্থী/সাবজেক্ট/পরীক্ষা যুক্ত আছে, তাই মুছা যাবে না। আগে সেগুলো সরান।", "danger")
-        return redirect(url_for("classes"))
     db.session.delete(c)
     db.session.commit()
     flash("Class deleted successfully!", "info")
-    return redirect(url_for("classes"))
-
-
-@app.route("/classes/<int:class_id>/add_section", methods=["POST"])
-@login_required
-def add_section(class_id):
-    name = request.form.get("section_name", "").strip()
-    if name:
-        db.session.add(Section(name=name, class_id=class_id))
-        db.session.commit()
-        flash("Section added successfully!", "success")
     return redirect(url_for("classes"))
 
 
@@ -494,9 +505,6 @@ def edit_section(section_id):
 @login_required
 def delete_section(section_id):
     sec = Section.query.get_or_404(section_id)
-    if Student.query.filter_by(section_id=section_id).count() > 0:
-        flash("এই সেকশনে শিক্ষার্থী যুক্ত আছে, তাই মুছা যাবে না।", "danger")
-        return redirect(url_for("classes"))
     db.session.delete(sec)
     db.session.commit()
     flash("Section deleted successfully!", "info")
@@ -597,9 +605,9 @@ def exams():
 @login_required
 def edit_exam(exam_id):
     e = Exam.query.get_or_404(exam_id)
-    e.name = request.form["name"]
-    e.class_id = request.form.get("class_id", type=int)
-    e.exam_date = request.form.get("exam_date")
+    e.name = request.form.get("name", e.name).strip() or e.name
+    e.class_id = request.form.get("class_id", type=int) or e.class_id
+    e.exam_date = request.form.get("exam_date") or e.exam_date
     db.session.commit()
     flash("Exam updated successfully!", "success")
     return redirect(url_for("exams"))
@@ -609,7 +617,7 @@ def edit_exam(exam_id):
 @login_required
 def delete_exam(exam_id):
     e = Exam.query.get_or_404(exam_id)
-    Mark.query.filter_by(exam_id=exam_id).delete()
+    Mark.query.filter_by(exam_id=e.id).delete()
     db.session.delete(e)
     db.session.commit()
     flash("Exam deleted successfully!", "info")
@@ -639,10 +647,10 @@ def subjects():
 @login_required
 def edit_subject(subject_id):
     s = Subject.query.get_or_404(subject_id)
-    s.name = request.form["name"]
-    s.class_id = request.form.get("class_id", type=int)
-    s.full_marks = request.form.get("full_marks", type=int) or 100
-    s.pass_marks = request.form.get("pass_marks", type=int) or 33
+    s.name = request.form.get("name", s.name).strip() or s.name
+    s.class_id = request.form.get("class_id", type=int) or s.class_id
+    s.full_marks = request.form.get("full_marks", type=int) or s.full_marks
+    s.pass_marks = request.form.get("pass_marks", type=int) or s.pass_marks
     db.session.commit()
     flash("Subject updated successfully!", "success")
     return redirect(url_for("subjects"))
@@ -652,7 +660,7 @@ def edit_subject(subject_id):
 @login_required
 def delete_subject(subject_id):
     s = Subject.query.get_or_404(subject_id)
-    Mark.query.filter_by(subject_id=subject_id).delete()
+    Mark.query.filter_by(subject_id=s.id).delete()
     db.session.delete(s)
     db.session.commit()
     flash("Subject deleted successfully!", "info")
@@ -1048,7 +1056,7 @@ def init_db():
             ))
         if not User.query.filter_by(username="admin").first():
             u = User(username="admin", role="admin")
-            u.set_password("MCS1234")
+            u.set_password("admin123")
             db.session.add(u)
         db.session.commit()
 

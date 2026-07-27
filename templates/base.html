@@ -14,9 +14,9 @@
 </head>
 <body>
 {% if current_user.is_authenticated %}
-<nav class="navbar navbar-expand-lg navbar-dark app-navbar py-2">
+<nav class="navbar navbar-expand-lg navbar-dark app-navbar">
   <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">🏫 <span class="d-none d-sm-inline">Mojidpur Central School</span><span class="d-inline d-sm-none">MCS</span></a>
+    <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">🏫 Mojidpur Central School</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -25,36 +25,19 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('students') }}">Students</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('teachers') }}">Teachers</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('classes') }}">Classes</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('classes') }}">Classes/Sections</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('attendance_students') }}">Student Attendance</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('attendance_teachers') }}">Teacher Attendance</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('exams') }}">Exams</a></li>
-
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Attendance</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{{ url_for('attendance_students') }}">Student Attendance</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('attendance_teachers') }}">Teacher Attendance</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('face_attendance_page') }}">📷 Face Attendance</a></li>
-          </ul>
-        </li>
-
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">AI Tools</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{{ url_for('insights') }}">🧠 AI Insights</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('notifications') }}">📨 Notifications</a></li>
-            <li><a class="dropdown-item" href="{{ url_for('chatbot_page') }}">💬 AI Chatbot</a></li>
-          </ul>
-        </li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('insights') }}">AI Insights</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('notifications') }}">Notifications</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('chatbot_page') }}">AI Chatbot</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('face_attendance_page') }}">Face Attendance</a></li>
       </ul>
       <ul class="navbar-nav">
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">👤 {{ current_user.username }}</a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="{{ url_for('settings') }}">⚙️ Settings</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="{{ url_for('logout') }}">🚪 Logout</a></li>
-          </ul>
-        </li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}">Settings</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('change_password') }}">Change Password</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a></li>
       </ul>
     </div>
   </div>
