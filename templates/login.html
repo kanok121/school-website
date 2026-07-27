@@ -5,46 +5,222 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - Mojidpur Central School</title>
 <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#0a0a0a">
 <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="login-body d-flex align-items-center justify-content-center">
-<div class="login-card card shadow-lg p-4">
-  <div class="text-center mb-3">
-    <h3 class="fw-bold">🏫 Mojidpur Central School</h3>
-    <p class="text-muted">Login to the School Management System</p>
-  </div>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-  <form method="POST">
-    <div class="mb-3">
-      <label class="form-label">Username</label>
-      <input type="text" name="username" class="form-control" required autofocus>
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Password</label>
-      <input type="password" name="password" class="form-control" required>
-    </div>
-    <button type="submit" class="btn btn-primary w-100">Login</button>
-  </form>
-  <p class="text-center mt-3">
-    <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
-  </p>
-  <p class="text-center text-muted mt-3 small">Default: admin / admin123</p>
-</div>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+
+  body {
+    min-height: 100vh;
+    background: #060608;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
   }
-</script>
+
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .glow-red { width: 480px; height: 480px; background: #c0392b; left: -160px; bottom: -140px; }
+  .glow-purple { width: 520px; height: 520px; background: #8e44ad; right: -180px; top: -160px; }
+
+  .wave-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    opacity: 0.85;
+  }
+
+  .login-circle {
+    position: relative;
+    z-index: 2;
+    width: 460px;
+    height: 460px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(70,80,85,0.55), rgba(15,17,20,0.85) 70%);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 0 40px rgba(255,255,255,0.03);
+    backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 70px;
+  }
+
+  @media (max-width: 500px) {
+    .login-circle { width: 340px; height: 340px; padding: 40px 40px; }
+  }
+
+  .login-title {
+    color: #f2f2f2;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  .school-name {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.7rem;
+    text-align: center;
+    margin-top: -20px;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  .input-group {
+    position: relative;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .input-group input {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 10px 40px 10px 16px;
+    color: #eee;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input::placeholder { color: rgba(255,255,255,0.35); }
+  .input-group input:focus { border-color: rgba(120,180,255,0.5); }
+
+  .input-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+
+  .login-btn {
+    width: 60%;
+    background: linear-gradient(135deg, #2c2f36, #1a1c20);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #eee;
+    border-radius: 18px;
+    padding: 9px 0;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    margin-bottom: 14px;
+    transition: background 0.2s;
+  }
+  .login-btn:hover { background: linear-gradient(135deg, #3a3d45, #24262b); }
+
+  .login-links {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.55);
+  }
+  .login-links label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .login-links a { color: rgba(255,255,255,0.55); text-decoration: none; }
+  .login-links a:hover { color: #fff; text-decoration: underline; }
+
+  .alert-box {
+    width: 100%;
+    background: rgba(220,53,69,0.15);
+    border: 1px solid rgba(220,53,69,0.4);
+    color: #ff9aa2;
+    font-size: 0.7rem;
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .alert-box.success {
+    background: rgba(40,167,69,0.15);
+    border-color: rgba(40,167,69,0.4);
+    color: #8fe3a5;
+  }
+</style>
+</head>
+<body>
+  <div class="glow glow-red"></div>
+  <div class="glow glow-purple"></div>
+
+  <svg class="wave-bg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="waveRed" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#e74c3c" stop-opacity="0"/>
+        <stop offset="50%" stop-color="#e74c3c" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#e74c3c" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="wavePurple" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#9b59b6" stop-opacity="0"/>
+        <stop offset="50%" stop-color="#9b59b6" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#9b59b6" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="M -100 480 C 150 380, 250 560, 500 460 S 850 380, 950 300" stroke="url(#waveRed)" stroke-width="2" fill="none"/>
+    <path d="M -100 500 C 150 400, 250 580, 500 480 S 850 400, 950 320" stroke="url(#waveRed)" stroke-width="1.5" fill="none"/>
+    <path d="M -100 520 C 150 420, 250 600, 500 500 S 850 420, 950 340" stroke="url(#waveRed)" stroke-width="1" fill="none"/>
+    <path d="M -100 120 C 200 40, 350 220, 600 100 S 900 40, 1000 -20" stroke="url(#wavePurple)" stroke-width="2" fill="none"/>
+    <path d="M -100 140 C 200 60, 350 240, 600 120 S 900 60, 1000 0" stroke="url(#wavePurple)" stroke-width="1.5" fill="none"/>
+    <path d="M -100 160 C 200 80, 350 260, 600 140 S 900 80, 1000 20" stroke="url(#wavePurple)" stroke-width="1" fill="none"/>
+  </svg>
+
+  <div class="login-circle">
+    <div class="login-title">LOGIN</div>
+    <div class="school-name">Mojidpur Central School</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert-box {{ 'success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+      <div class="input-group">
+        <input type="text" name="username" placeholder="Username" required autofocus>
+        <span class="input-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+        </span>
+      </div>
+      <div class="input-group">
+        <input type="password" name="password" placeholder="Password" required>
+        <span class="input-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-2V6a5 5 0 0 0-5-5zm-3 5a3 3 0 1 1 6 0v3H9V6zm3 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></svg>
+        </span>
+      </div>
+
+      <button type="submit" class="login-btn">LOGIN</button>
+
+      <div class="login-links">
+        <label>
+          <input type="checkbox" name="remember" style="accent-color:#888;"> Remember me
+        </label>
+        <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
+    }
+  </script>
 </body>
 </html>

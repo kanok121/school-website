@@ -192,9 +192,10 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        remember = bool(request.form.get("remember"))
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
-            login_user(user)
+            login_user(user, remember=remember)
             return redirect(url_for("dashboard"))
         flash("Invalid username or password!", "danger")
     return render_template("login.html")
